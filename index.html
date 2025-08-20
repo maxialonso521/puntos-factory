@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>🏭 Factory Points - Clicker con Sonidos Industriales</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        
+        body {
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle at 50% 50%, #2d1b3d 0%, #1a0e2e 40%, #0f0a1a 100%);
+            color: #e7e7ec;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            user-select: none;
+            position: relative;
+        }
+
+        /* Partículas flotantes de vapor */
+        .steam-particle {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 8s linear infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) translateX(0) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.6;
+                transform: scale(1);
+            }
+            90% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: translateY(-10vh) translateX(var(--drift)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* Engranajes de fondo mejorados */
+        .gear {
+            position: fixed;
+            border: 3px solid rgba(255, 165, 0, 0.15);
+            border-radius: 50%;
+            animation: rotate var(--speed) linear infinite;
+            pointer-events: none;
+        }
+
+        .gear::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60%;
+            height: 60%;
+            border: 2px solid rgba(255, 165, 0, 0.1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .gear:nth-child(1) {
+            width: 120px;
+            height: 120px;
+            top: 8%;
+            left: 12%;
+            --speed: 20s;
+        }
+
+        .gear:nth-child(2) {
+            width: 80px;
+            height: 80px;
+            top: 65%;
+            right: 15%;
+            animation-direction: reverse;
+            --speed: 15s;
+        }
+
+        .gear:nth-child(3) {
+            width: 150px;
+            height: 150px;
+            bottom: 10%;
+            left: 8%;
+            --speed: 25s;
+        }
+
+        .gear:nth-child(4) {
+            width: 60px;
+            height: 60px;
+            top: 25%;
+            right: 35%;
+            --speed: 12s;
+            animation-direction: reverse;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        main {
+            display: grid;
+            gap: 2rem;
+            place-items: center;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            padding: 2.5rem;
+            border-radius: 25px;
+            background: rgba(45, 27, 61, 0.95);
+            backdrop-filter: blur(20px);
+            box-shadow: 
+                0 30px 60px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.1),
+                0 0 50px rgba(255, 165, 0, 0.15);
+            border: 2px solid rgba(255, 165, 0, 0.3);
+            max-width: 95vw;
+        }
+
+        .factory-header {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ffa500;
+            text-shadow: 
+                0 0 20px rgba(255, 165, 0, 0.8),
+                0 0 40px rgba(255, 165, 0, 0.4);
+            margin-bottom: 0.5rem;
+        }
+
+        .factory-header .logo {
+            font-size: 3.5rem;
+            animation: factoryPulse 3s infinite;
+            filter: drop-shadow(0 0 15px rgba(255, 165, 0, 0.6));
+        }
+
+        @keyframes factoryPulse {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.05) rotate(1deg); }
+            75% { transform: scale(1.05) rotate(-1deg); }
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.7;
+            margin-top: -0.5rem;
+            margin-bottom: 1rem;
+            color: #ffa500;
+        }
+
+        /* Indicador de combo/streak */
+        .combo-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            padding: 0.8rem 1.2rem;
+            border-radius: 15px;
+            font-weight: 900;
+            font-size: 1.1rem;
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+            transform: scale(0);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+        }
+
+        .combo-indicator.show {
+            transform: scale(1);
+        }
+
+        .combo-indicator.mega {
+            background: rgba(255, 215, 0, 0.9);
+            color: black;
+            animation: comboShake 0.5s ease-out;
+        }
+
+        @keyframes comboShake {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(2deg); }
+            75% { transform: scale(1.1) rotate(-2deg); }
+        }
+
+        #factoryPoints {
+            font-size: clamp(4rem, 18vw, 14rem);
+            font-weight: 900;
+            letter-spacing: 0.02em;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            text-shadow: 
+                0 0 40px rgba(255, 165, 0, 1),
+                0 0 80px rgba(255, 165, 0, 0.5),
+                0 0 120px rgba(255, 165, 0, 0.2);
+            background: linear-gradient(45deg, #ffa500, #ff8c00, #ffd700, #ff6b35, #ffa500);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: factoryGlow 4s ease-in-out infinite;
+            position: relative;
+        }
+
+        @keyframes factoryGlow {
+            0%, 100% { background-position: 0% 50%; }
+            25% { background-position: 100% 50%; }
+            50% { background-position: 100% 100%; }
+            75% { background-position: 0% 100%; }
+        }
+
+        #factoryPoints.factory-boost {
+            transform: scale(1.25) rotate(3deg);
+            filter: drop-shadow(0 0 50px rgba(255, 165, 0, 1));
+        }
+
+        #factoryPoints.mega-boost {
+            transform: scale(1.4) rotate(-5deg);
+            filter: drop-shadow(0 0 80px rgba(255, 215, 0, 1));
+            animation: megaPulse 0.6s ease-out;
+        }
+
+        @keyframes megaPulse {
+            0%, 100% { transform: scale(1.4) rotate(-5deg); }
+            50% { transform: scale(1.6) rotate(5deg); }
+        }
+
+        /* Área de chispas mejorada */
+        #sparks {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            pointer-events: none;
+            overflow: visible;
+            width: 0;
+            height: 0;
+            z-index: 5;
+        }
+
+        .spark {
+            position: absolute;
+            opacity: 1;
+            animation: factorySpark var(--dur) forwards ease-out;
+        }
+
+        .spark-metal {
+            background: linear-gradient(45deg, #ffa500, #ff8c00);
+            box-shadow: 0 0 20px #ffa500;
+            width: 16px;
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        .spark-fire {
+            background: radial-gradient(circle, #ff4500 0%, #ffa500 100%);
+            box-shadow: 0 0 25px #ff4500;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .spark-electric {
+            background: linear-gradient(45deg, #00bfff, #ffa500);
+            box-shadow: 0 0 30px #00bfff;
+            width: 6px;
+            height: 18px;
+            border-radius: 2px;
+        }
+
+        .spark-gold {
+            background: radial-gradient(circle, #ffd700 0%, #ffed4a 100%);
+            box-shadow: 0 0 35px #ffd700;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        @keyframes factorySpark {
+            0% {
+                transform: translate(0, 0) scale(var(--size)) rotate(var(--rotation));
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--dx), var(--dy)) scale(0.1) rotate(calc(var(--rotation) + 720deg));
+                opacity: 0;
+            }
+        }
+
+        /* Botón principal gigante mejorado */
+        .click-button {
+            width: 220px;
+            height: 220px;
+            border: 0;
+            cursor: pointer;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffa500 0%, #ff8c00 30%, #ff6b35 70%, #ffd700 100%);
+            color: #000;
+            font-weight: 900;
+            font-size: 2.2rem;
+            font-family: inherit;
+            box-shadow: 
+                0 20px 50px rgba(255, 165, 0, 0.5),
+                inset 0 3px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+                0 0 40px rgba(255, 165, 0, 0.3);
+            transform: translateY(0);
+            transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .click-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            transition: left 0.6s;
+        }
+
+        .click-button:hover::before {
+            left: 100%;
+        }
+
+        .click-button:hover {
+            transform: translateY(-5px) scale(1.08);
+            box-shadow: 
+                0 25px 60px rgba(255, 165, 0, 0.7),
+                inset 0 3px 0 rgba(255, 255, 255, 0.5),
+                0 0 60px rgba(255, 165, 0, 0.5);
+        }
+
+        .click-button:active {
+            transform: translateY(2px) scale(0.95);
+            box-shadow: 
+                0 10px 30px rgba(255, 165, 0, 0.4),
+                inset 0 5px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .click-button .btn-emoji {
+            display: block;
+            font-size: 4rem;
+            margin-bottom: 0.2rem;
+            animation: toolBounce 2s infinite;
+        }
+
+        @keyframes toolBounce {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        .click-button .btn-text {
+            display: block;
+            font-size: 1.4rem;
+            font-weight: 900;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Botones secundarios mejorados */
+        .secondary-buttons {
+            display: flex;
+            gap: 1.2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .secondary-btn {
+            border: 0;
+            cursor: pointer;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            background: rgba(26, 14, 46, 0.9);
+            color: #ffa500;
+            font-weight: 700;
+            font-family: inherit;
+            font-size: 1.1rem;
+            box-shadow: 
+                0 8px 25px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255, 165, 0, 0.2);
+            border: 2px solid rgba(255, 165, 0, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .secondary-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 165, 0, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .secondary-btn:hover::before {
+            left: 100%;
+        }
+
+        .secondary-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 
+                0 12px 35px rgba(255, 165, 0, 0.3),
+                inset 0 1px 0 rgba(255, 165, 0, 0.3);
+            background: rgba(255, 165, 0, 0.1);
+            border-color: rgba(255, 165, 0, 0.6);
+        }
+
+        .btn-unproduce {
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            border-color: rgba(255, 107, 107, 0.6);
+        }
+
+        .btn-unproduce:hover {
+            background: rgba(255, 107, 107, 1);
+            box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-reset {
+            background: rgba(255, 140, 0, 0.9);
+            color: white;
+            border-color: rgba(255, 140, 0, 0.6);
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 140, 0, 1);
+            box-shadow: 0 12px 35px rgba(255, 140, 0, 0.4);
+        }
+
+        /* Control de volumen */
+        .volume-control {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(26, 14, 46, 0.9);
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 165, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .volume-btn {
+            background: none;
+            border: none;
+            color: #ffa500;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.2rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .volume-btn:hover {
+            background: rgba(255, 165, 0, 0.2);
+            transform: scale(1.1);
+        }
+
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 165, 0, 0.3);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #ffa500;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        /* Info de controles mejorada */
+        .controls {
+            margin-top: 1.5rem;
+            padding: 1.2rem;
+            background: rgba(26, 14, 46, 0.8);
+            border-radius: 15px;
+            border: 2px solid rgba(255, 165, 0, 0.3);
+            font-size: 0.95rem;
+        }
+
+        .controls-title {
+            font-weight: 900;
+            color: #ffa500;
+            margin-bottom: 0.8rem;
+            text-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+        }
+
+        .key {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            margin: 0.2rem;
+            background: rgba(255, 165, 0, 0.2);
+            border: 2px solid rgba(255, 165, 0, 0.4);
+            border-radius: 6px;
+            font-weight: 700;
+            color: #ffa500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Responsive mejorado */
+        @media (max-width: 640px) {
+            main {
+                padding: 2rem;
+                margin: 1rem;
+                gap: 1.5rem;
+            }
+            
+            .click-button {
+                width: 180px;
+                height: 180px;
+                font-size: 1.8rem;
+            }
+            
+            .click-button .btn-emoji {
+                font-size: 3rem;
+            }
+            
+            .factory-header {
+                font-size: 1.6rem;
+            }
+            
+            .factory-header .logo {
+                font-size: 3rem;
+            }
+            
+            #factoryPoints {
+                font-size: clamp(3rem, 25vw, 10rem);
+            }
+            
+            .volume-control {
+                position: static;
+                margin-bottom: 1rem;
+                justify-self: center;
+            }
+            
+            .combo-indicator {
+                position: static;
+                margin-bottom: 1rem;
+                transform: scale(1);
+                display: none;
+            }
+            
+            .combo-indicator.show {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Engranajes de fondo -->
+    <div class="gear"></div>
+    <div class="gear"></div>
+    <div class="gear"></div>
+    <div class="gear"></div>
+    
+    <main>
+        <!-- Control de volumen -->
+        <div class="volume-control">
+            <button id="muteBtn" class="volume-btn">🔊</button>
+            <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="70">
+        </div>
+
+        <!-- Indicador de combo -->
+        <div id="comboIndicator" class="combo-indicator">
+            🔥 COMBO x<span id="comboCount">1</span>
+        </div>
+
+        <!-- Header -->
+        <div class="factory-header">
+            <div class="logo">🏭</div>
+            <div>FACTORY POINTS</div>
+        </div>
+        <div class="subtitle">Sistema Industrial Avanzado con Audio</div>
+
+        <!-- Contador principal -->
+        <div id="factoryPoints">0</div>
+        <div id="sparks"></div>
+
+        <!-- Botón principal gigante -->
+        <button id="clickButton" class="click-button">
+            <div class="btn-emoji">🔧</div>
+            <div class="btn-text">Agregar puntos Factory!</div>
+        </button>
+
+        <!-- Botones secundarios -->
+        <div class="secondary-buttons">
+            <button id="unproduce" class="secondary-btn btn-unproduce">⛔ Quitar puntos Factory</button>
+            <button id="reset" class="secondary-btn btn-reset">🔄 REINICIAR</button>
+            <button id="save" class="secondary-btn">💾 GUARDAR</button>
+        </div>
+
+        <!-- Controles -->
+        <div class="controls">
+            <div class="controls-title">⌨️ CONTROLES DE FÁBRICA:</div>
+            <span class="key">ESPACIO</span> o <span class="key">CLICK</span> Producir Factory Points
+            <br><br>
+            <span class="key">⌫ BORRAR</span> Desproducir -1 • <span class="key">R</span> Reiniciar Fábrica • <span class="key">S</span> Guardar Progreso • <span class="key">M</span> Silenciar Audio
+        </div>
+    </main>
+
+    <script>
+        (() => {
+            // Estado del juego
+            let factoryPoints = parseInt(localStorage.getItem('factoryPoints') || '0', 10);
+            let combo = 1;
+            let comboTimer = null;
+            let clickCount = 0;
+            let volume = parseFloat(localStorage.getItem('volume') || '0.7');
+            let isMuted = localStorage.getItem('isMuted') === 'true';
+            
+            if (Number.isNaN(factoryPoints)) factoryPoints = 0;
+
+            // Elementos DOM
+            const pointsDisplay = document.getElementById('factoryPoints');
+            const clickButton = document.getElementById('clickButton');
+            const unproduceBtn = document.getElementById('unproduce');
+            const resetBtn = document.getElementById('reset');
+            const saveBtn = document.getElementById('save');
+            const sparks = document.getElementById('sparks');
+            const comboIndicator = document.getElementById('comboIndicator');
+            const comboCount = document.getElementById('comboCount');
+            const muteBtn = document.getElementById('muteBtn');
+            const volumeSlider = document.getElementById('volumeSlider');
+
+            let suppressClick = false;
+
+            // Sistema de audio industrial
+            const AudioSystem = {
+                context: null,
+                
+                init() {
+                    try {
+                        this.context = new (window.AudioContext || window.webkitAudioContext)();
+                        volumeSlider.value = volume * 100;
+                        this.updateMuteButton();
+                    } catch (e) {
+                        console.log('Audio no soportado');
+                    }
+                },
+
+                createTone(frequency, duration, type = 'sine', fadeOut = true) {
+                    if (!this.context || isMuted) return;
+                    
+                    const oscillator = this.context.createOscillator();
+                    const gainNode = this.context.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.context.destination);
+                    
+                    oscillator.frequency.setValueAtTime(frequency, this.context.currentTime);
+                    oscillator.type = type;
+                    
+                    gainNode.gain.setValueAtTime(volume * 0.3, this.context.currentTime);
+                    
+                    if (fadeOut) {
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + duration);
+                    }
+                    
+                    oscillator.start(this.context.currentTime);
+                    oscillator.stop(this.context.currentTime + duration);
+                },
+
+                playClickSound(comboLevel = 1) {
+                    if (!this.context || isMuted) return;
+                    
+                    // Sonido base metálico
+                    this.createTone(800 + (comboLevel * 50), 0.1, 'square');
+                    
+                    // Sonido de chispa
+                    setTimeout(() => {
+                        this.createTone(1200 + (comboLevel * 30), 0.05, 'sawtooth');
+                    }, 20);
+                    
+                    // Sonido de combo especial
+                    if (comboLevel >= 5) {
+                        setTimeout(() => {
+                            this.createTone(600, 0.15, 'triangle');
+                        }, 50);
+                    }
+                },
+
+                playMegaSound() {
+                    if (!this.context || isMuted) return;
+                    
+                    // Secuencia de sonidos épicos
+                    this.createTone(400, 0.3, 'sawtooth');
+                    setTimeout(() => this.createTone(500, 0.2, 'square'), 100);
+                    setTimeout(() => this.createTone(700, 0.15, 'sine'), 200);
+                    setTimeout(() => this.createTone(900, 0.1, 'triangle'), 300);
+                },
+
+                playUnproduceSound() {
+                    if (!this.context || isMuted) return;
+                    
+                    // Sonido descendente de desproducción
+                    this.createTone(600, 0.15, 'sawtooth');
+                    setTimeout(() => this.createTone(400, 0.1, 'square'), 50);
+                },
+
+                playResetSound() {
+                    if (!this.context || isMuted) return;
+                    
+                    // Sonido descendente de apagado de máquina
+                    for (let i = 0; i < 10; i++) {
+                        setTimeout(() => {
+                            this.createTone(1000 - (i * 80), 0.08, 'sine');
+                        }, i * 50);
+                    }
+                },
+
+                playSaveSound() {
+                    if (!this.context || isMuted) return;
+                    
+                    // Sonido de confirmación electrónico
+                    this.createTone(800, 0.1, 'sine');
+                    setTimeout(() => this.createTone(1000, 0.1, 'sine'), 100);
+                    setTimeout(() => this.createTone(1200, 0.2, 'sine'), 200);
+                },
+
+                updateMuteButton() {
+                    muteBtn.textContent = isMuted ? '🔇' : '🔊';
+                }
+            };
+
+            // Crear partículas de vapor
+            const createSteamParticles = () => {
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        const particle = document.createElement('div');
+                        particle.className = 'steam-particle';
+                        particle.style.left = Math.random() * 100 + '%';
+                        particle.style.setProperty('--drift', (Math.random() - 0.5) * 200 + 'px');
+                        document.body.appendChild(particle);
+                        
+                        setTimeout(() => particle.remove(), 8000);
+                    }, i * 200);
+                }
+            };
+
+            // Crear chispas de desproducción (rojas)
+            const createUnproduceSparks = (amount = 15) => {
+                for (let i = 0; i < amount; i++) {
+                    const spark = document.createElement('div');
+                    spark.className = 'spark';
+                    spark.style.background = 'radial-gradient(circle, #ff4444 0%, #cc0000 100%)';
+                    spark.style.boxShadow = '0 0 15px #ff4444';
+                    spark.style.width = '8px';
+                    spark.style.height = '8px';
+                    spark.style.borderRadius = '50%';
+                    
+                    const angle = (Math.random() * 180 + 180) * Math.PI / 180; // Semicírculo inferior
+                    const speed = 60 + Math.random() * 100;
+                    const dx = Math.cos(angle) * speed + 'px';
+                    const dy = Math.sin(angle) * speed + 'px';
+                    const size = 0.6 + Math.random() * 1.2;
+                    const rotation = Math.random() * 360;
+                    const duration = 1 + Math.random() * 1;
+                    
+                    spark.style.setProperty('--dx', dx);
+                    spark.style.setProperty('--dy', dy);
+                    spark.style.setProperty('--size', size);
+                    spark.style.setProperty('--rotation', rotation + 'deg');
+                    spark.style.setProperty('--dur', duration + 's');
+                    
+                    sparks.appendChild(spark);
+                    setTimeout(() => spark.remove(), duration * 1000);
+                }
+            };
+
+            // Crear chispas industriales mejoradas
+            const createFactorySparks = (amount = 25, types = ['metal', 'fire']) => {
+                for (let i = 0; i < amount; i++) {
+                    const spark = document.createElement('div');
+                    const sparkType = types[Math.floor(Math.random() * types.length)];
+                    spark.className = `spark spark-${sparkType}`;
+                    
+                    const angle = (Math.random() * 180 + 90) * Math.PI / 180; // Semicírculo superior
+                    const speed = 80 + Math.random() * 140;
+                    const dx = Math.cos(angle) * speed + 'px';
+                    const dy = Math.sin(angle) * speed * -1 + 'px'; // Hacia arriba
+                    const size = 0.8 + Math.random() * 1.8;
+                    const rotation = Math.random() * 360;
+                    const duration = 1.2 + Math.random() * 1.3;
+                    
+                    spark.style.setProperty('--dx', dx);
+                    spark.style.setProperty('--dy', dy);
+                    spark.style.setProperty('--size', size);
+                    spark.style.setProperty('--rotation', rotation + 'deg');
+                    spark.style.setProperty('--dur', duration + 's');
+                    
+                    sparks.appendChild(spark);
+                    setTimeout(() => spark.remove(), duration * 1000);
+                }
+            };
+
+            // Sistema de combo mejorado
+            const updateCombo = () => {
+                clickCount++;
+                
+                if (clickCount >= 5) {
+                    combo = Math.min(combo + 1, 20);
+                    clickCount = 0;
+                }
+                
+                comboCount.textContent = combo;
+                
+                if (combo >= 10) {
+                    comboIndicator.classList.add('mega');
+                    setTimeout(() => comboIndicator.classList.remove('mega'), 500);
+                }
+                
+                if (combo > 1) {
+                    comboIndicator.classList.add('show');
+                }
+                
+                // Reset combo después de inactividad
+                clearTimeout(comboTimer);
+                comboTimer = setTimeout(() => {
+                    combo = 1;
+                    clickCount = 0;
+                    comboIndicator.classList.remove('show');
+                    comboCount.textContent = combo;
+                }, 3000);
+            };
+
+            // Animaciones mejoradas
+            const animatePoints = () => {
+                if (combo >= 10) {
+                    pointsDisplay.classList.add('mega-boost');
+                    createFactorySparks(40, ['metal', 'fire', 'electric', 'gold']);
+                    createSteamParticles();
+                    AudioSystem.playMegaSound();
+                    setTimeout(() => pointsDisplay.classList.remove('mega-boost'), 600);
+                } else if (combo >= 5) {
+                    pointsDisplay.classList.add('factory-boost');
+                    createFactorySparks(30, ['metal', 'fire', 'electric']);
+                    AudioSystem.playClickSound(combo);
+                    setTimeout(() => pointsDisplay.classList.remove('factory-boost'), 400);
+                } else {
+                    pointsDisplay.classList.add('factory-boost');
+                    createFactorySparks(20, ['metal', 'fire']);
+                    AudioSystem.playClickSound(combo);
+                    setTimeout(() => pointsDisplay.classList.remove('factory-boost'), 300);
+                }
+            };
+
+            // Actualizar display
+            const updateDisplay = () => {
+                pointsDisplay.textContent = factoryPoints.toLocaleString();
+                localStorage.setItem('factoryPoints', factoryPoints);
+            };
+
+            // Funciones principales
+            const addPoint = () => {
+                const pointsToAdd = combo;
+                factoryPoints += pointsToAdd;
+                updateDisplay();
+                updateCombo();
+                animatePoints();
+            };
+
+            const removePoint = () => {
+                if (factoryPoints > 0) {
+                    factoryPoints -= 1;
+                    updateDisplay();
+                    
+                    // Reset combo al desproducir
+                    combo = 1;
+                    clickCount = 0;
+                    comboIndicator.classList.remove('show');
+                    
+                    // Animación y sonido de desproducción
+                    createUnproduceSparks(12);
+                    AudioSystem.playUnproduceSound();
+                    
+                    // Animación del contador (hacia abajo)
+                    pointsDisplay.style.transform = 'scale(0.9)';
+                    pointsDisplay.style.color = '#ff4444';
+                    setTimeout(() => {
+                        pointsDisplay.style.transform = '';
+                        pointsDisplay.style.color = '';
+                    }, 200);
+                }
+            };
+
+            const reset = () => {
+                if (confirm('🏭 ¿Reiniciar todos los Factory Points? Se perderán todos los puntos acumulados.')) {
+                    factoryPoints = 0;
+                    combo = 1;
+                    clickCount = 0;
+                    updateDisplay();
+                    comboIndicator.classList.remove('show');
+                    AudioSystem.playResetSound();
+                    createFactorySparks(35, ['metal', 'fire', 'electric']);
+                    createSteamParticles();
+                }
+            };
+
+            const save = () => {
+                localStorage.setItem('factoryPoints', factoryPoints);
+                localStorage.setItem('volume', volume);
+                localStorage.setItem('isMuted', isMuted);
+                AudioSystem.playSaveSound();
+                createFactorySparks(15, ['gold', 'electric']);
+            };
+
+            // Control de audio
+            const toggleMute = () => {
+                isMuted = !isMuted;
+                AudioSystem.updateMuteButton();
+                localStorage.setItem('isMuted', isMuted);
+            };
+
+            const updateVolume = (value) => {
+                volume = value / 100;
+                localStorage.setItem('volume', volume);
+            };
+
+            // Inicialización
+            AudioSystem.init();
+            updateDisplay();
+            
+            // Crear vapor inicial
+            setTimeout(createSteamParticles, 1000);
+            setInterval(createSteamParticles, 10000);
+
+            // Event listeners
+            clickButton.addEventListener('click', () => {
+                // Activar contexto de audio en primer click
+                if (AudioSystem.context && AudioSystem.context.state === 'suspended') {
+                    AudioSystem.context.resume();
+                }
+                addPoint();
+            });
+
+            unproduceBtn.addEventListener('click', () => {
+                if (AudioSystem.context && AudioSystem.context.state === 'suspended') {
+                    AudioSystem.context.resume();
+                }
+                removePoint();
+            });
+
+            resetBtn.addEventListener('click', () => {
+                if (AudioSystem.context && AudioSystem.context.state === 'suspended') {
+                    AudioSystem.context.resume();
+                }
+                reset();
+            });
+
+            saveBtn.addEventListener('click', save);
+            muteBtn.addEventListener('click', toggleMute);
+            
+            volumeSlider.addEventListener('input', (e) => {
+                updateVolume(e.target.value);
+            });
+
+            // Controles de teclado
+            addEventListener('keydown', e => {
+                // Activar contexto de audio en primera tecla
+                if (AudioSystem.context && AudioSystem.context.state === 'suspended') {
+                    AudioSystem.context.resume();
+                }
+                
+                switch(e.code) {
+                    case 'Space':
+                        e.preventDefault();
+                        if (!suppressClick) {
+                            suppressClick = true;
+                            addPoint();
+                        }
+                        break;
+                    case 'KeyR':
+                        e.preventDefault();
+                        reset();
+                        break;
+                    case 'KeyS':
+                        e.preventDefault();
+                        save();
+                        break;
+                    case 'Backspace':
+                    case 'Delete':
+                        e.preventDefault();
+                        removePoint();
+                        break;
+                    case 'KeyM':
+                        e.preventDefault();
+                        toggleMute();
+                        break;
+                }
+            });
+
+            addEventListener('keyup', e => {
+                if (e.code === 'Space') suppressClick = false;
+            });
+
+            // Auto-guardado cada 2 minutos
+            setInterval(save, 120000);
+
+            console.log('🏭 Factory Points con Audio Industrial - ¡Listo para producir!');
+        })();
+    </script>
+</body>
+</html>
